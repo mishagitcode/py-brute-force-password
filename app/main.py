@@ -73,6 +73,14 @@ def brute_force_password() -> None:
                 found_dict[sha_hash] = password
                 print(password)
 
+    print(f"\n=== Results ===")
+    print(f"Found {len(found_dict)} out of {len(TARGET_HASHES)} passwords:")
+    for sha_hash in PASSWORDS_TO_BRUTE_FORCE:
+        if sha_hash in found_dict:
+            print(f"  {found_dict[sha_hash]}")
+        else:
+            print(f"  NOT FOUND: {sha_hash}")
+
 
 if __name__ == "__main__":
     start_time = time.perf_counter()
