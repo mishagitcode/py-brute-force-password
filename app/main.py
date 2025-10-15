@@ -1,3 +1,4 @@
+import multiprocessing
 import time
 from hashlib import sha256
 
@@ -15,13 +16,62 @@ PASSWORDS_TO_BRUTE_FORCE = [
     "e5f3ff26aa8075ce7513552a9af1882b4fbc2a47a3525000f6eb887ab9622207",
 ]
 
+TARGET_HASHES = set(PASSWORDS_TO_BRUTE_FORCE)
+
 
 def sha256_hash_str(to_hash: str) -> str:
     return sha256(to_hash.encode("utf-8")).hexdigest()
 
 
+def find_passwords(
+        start: int,
+        end: int,
+        found_queue: multiprocessing.Queue
+) -> None:
+    local_results = []
+
+    for i in range(start, end):
+        password = f"{i:08d}"
+        sha_password = sha256_hash_str(password)
+
+        if sha_password in TARGET_HASHES:
+            local_results.append((sha_password, password))
+
+    if local_results:
+        found_queue.put(local_results)
+
+
 def brute_force_password() -> None:
-    pass
+    found_queue = multiprocessing.Queue()
+    found_dict = {}
+
+    num_processes = multiprocessing.cpu_count()
+
+    total_range = 100_000_000
+    chunk_size = total_range // num_processes
+
+    tasks = []
+
+    for i in range(num_processes):
+        start = i * chunk_size
+        end = (i + 1) * chunk_size if i < num_processes - 1 else total_range
+
+        process = multiprocessing.Process(
+            target=find_passwords,
+            args=(start, end, found_queue),
+        )
+        tasks.append(process)
+        process.start()
+
+    for task in tasks:
+        task.join()
+
+    while not found_queue.empty():
+        results = found_queue.get()
+        for sha_hash, password in results:
+            if sha_hash not in found_dict:
+                found_dict[sha_hash] = password
+                print(password)
 
 
 if __name__ == "__main__":
